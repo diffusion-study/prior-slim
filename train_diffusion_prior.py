@@ -1,24 +1,20 @@
+from typing import List
+
 import click
 import torch
-
-from torch import nn
-from typing import List
 from accelerate import Accelerator
-from accelerate.utils import set_seed
-from torch.utils.data import DataLoader
-from embedding_reader import EmbeddingReader
 from accelerate.utils import dataclasses as accelerate_dataclasses
+from accelerate.utils import set_seed
+from torch import nn
+from torch.utils.data import DataLoader
 
-from dalle2_pytorch.utils import Timer
-from dalle2_pytorch.trackers import Tracker
 from dalle2_pytorch import DiffusionPriorTrainer
 from dalle2_pytorch.dataloaders import get_reader, make_splits
-from dalle2_pytorch.train_configs import (
-    DiffusionPriorConfig,
-    DiffusionPriorTrainConfig,
-    TrainDiffusionPriorConfig,
-)
-
+from dalle2_pytorch.trackers import Tracker
+from dalle2_pytorch.train_configs import (DiffusionPriorConfig,
+                                          DiffusionPriorTrainConfig,
+                                          TrainDiffusionPriorConfig)
+from dalle2_pytorch.utils import Timer
 
 # helpers
 
@@ -453,7 +449,7 @@ def train(
         # if we finished out an old epoch, reset the distribution to be a full epoch
         tracker.log({"tracking/epoch": epoch}, step=trainer.step.item())
 
-        if train_loader.dataset.get_start() > 0 and epoch == start_epoch+1:
+        if train_loader.dataset.get_start() > 0 and epoch == start_epoch + 1:
             if trainer.accelerator.is_main_process:
                 click.secho(f"Finished resumed epoch...resetting dataloader.")
             train_loader.dataset.set_start(0)
@@ -684,7 +680,10 @@ def initialize_training(config_file, accelerator):
 
         # display best values
         if trainer.accelerator.is_main_process:
-            click.secho(f"Current Epoch: {current_epoch} | Best Val Loss: {best_validation_loss} | Samples Seen: {samples_seen}", fg="yellow")
+            click.secho(
+                f"Current Epoch: {current_epoch} | Best Val Loss: {best_validation_loss} | Samples Seen: {samples_seen}",
+                fg="yellow",
+            )
 
         # update config to reflect recalled values
         config.train.num_samples_seen = samples_seen
@@ -730,7 +729,9 @@ def initialize_training(config_file, accelerator):
         )
         scaled_samples = length * config.train.current_epoch
         start_point = (
-            scaled_samples - samples_seen if scaled_samples > samples_seen else samples_seen
+            scaled_samples - samples_seen
+            if scaled_samples > samples_seen
+            else samples_seen
         )
 
         if trainer.accelerator.is_main_process:
