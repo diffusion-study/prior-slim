@@ -989,7 +989,7 @@ class DiffusionPriorNetwork(nn.Module):
             if num_text_embeds > 1
             else nn.Identity(),
             Rearrange("b (n d) -> b n d", n=num_text_embeds),
-        )
+        ) # this reshapes the shape from [batch, 768] to [batch, 1, 768]
 
         self.continuous_embedded_time = not exists(num_timesteps)
 
@@ -1085,10 +1085,13 @@ class DiffusionPriorNetwork(nn.Module):
         if not exists(text_encodings):
             text_encodings = torch.empty((batch, 0, dim), device=device, dtype=dtype)
 
+
+        # create a mask of shape [batch_size, seq_len] to represent any non-zero positions
         mask = torch.any(text_encodings != 0.0, dim=-1)
 
-        # replace any padding in the text encodings with learned padding tokens unique across position
 
+        # these two lines truncate text_encodings and the mask to predefined max_text_len
+        # note that if the original length is less than self.max_text_len, it won't truncate
         text_encodings = text_encodings[:, : self.max_text_len]
         mask = mask[:, : self.max_text_len]
 
@@ -1103,6 +1106,8 @@ class DiffusionPriorNetwork(nn.Module):
 
         null_text_encodings = self.null_text_encodings.to(text_encodings.dtype)
 
+
+        # the following operation means replace the padded positions with null_text_encodings
         text_encodings = torch.where(
             rearrange(mask, "b n -> b n 1").clone() & text_keep_mask,
             text_encodings,
@@ -1346,6 +1351,9 @@ class DiffusionPrior(nn.Module):
         times = torch.linspace(-1.0, total_timesteps, steps=timesteps + 1)[:-1]
 
         times = list(reversed(times.int().tolist()))
+
+        # looks like [949, 899, 849, 799, 749, 699, 649, 599, 549, 499, 449, 399, 349, 299, 249, 199, 149, 99, 49, -1] if total_timesteps=1000 and timesteps=20
+
         time_pairs = list(zip(times[:-1], times[1:]))
 
         image_embed = torch.randn(shape, device=device)
